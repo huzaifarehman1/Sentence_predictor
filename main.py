@@ -1,8 +1,8 @@
-import pyro
+from pyro.distributions import Categorical
 import os
 import re
-
-
+import random
+from torch import tensor
 def taking_data_input():
     with open("path_input.txt") as f:
         path_ = f.read()
@@ -51,17 +51,45 @@ def create_transition_dict(filtered_data:list):
     return trans_dict        
 
 
-def make_sentences(number = 5):
+def make_sentences(transition:dict,number = 5):
+    for k,v in transition.items():
+        s = sum(v.values())
+        for k2,v2 in v.items():
+            transition[k][k2] = round(v2/s,4) 
     count = 0
     string = ""
+    seen = {}
+    print(transition["."])
+    curr = random.choice(list(transition["."].keys()))
     while count<5:
-        pass
         
+        if curr not in seen:
+            possibilities = []
+            probabilities = []
+        
+            for k,v in transition[curr].items():
+                probabilities.append(v)
+                possibilities.append(k)
+            seen[curr] = (probabilities,possibilities) # important
+        
+        P,states = seen[curr]
+        index = (Categorical(tensor(P))).sample().item()        
+        word = states[index]
+        
+        if word not in [".",","]:
+            string += " "
+        string += word 
+        curr = word 
+        
+        if word == ".":
+            count += 1
+            
+    return string          
     
 if __name__=="__main__":
     data = taking_data_input()
     fil_data = filter_data(data)
     transition_model = create_transition_dict(fil_data)
-    make_sentences(3)        
+    print(make_sentences(transition_model,3))        
            
     
