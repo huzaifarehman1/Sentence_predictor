@@ -36,32 +36,63 @@ def filter_data(data: str):
     return temp
 
 
-def create_transition_dict(filtered_data:list):
+def create_transition_dict(filtered_data:list,order = 1): #order for markov chain
     trans_dict = {}#store count only
-    for i in range(1,len(filtered_data)):
-        prev = filtered_data[i-1]
-        if prev not in trans_dict:
-            trans_dict[prev] = {}
+    prev = [0]*order
+    
+    for i in range(order):
+        prev[i] = filtered_data[i]
+    
+    l_pointer = 0 #inclusive
+    r_pointer = order  #exclusive  
+    starting_values = set()# for . have (order length) tuple
+    
+    for i in range(order,len(filtered_data)):
+        temp = prev[l_pointer:r_pointer]
         
-        if filtered_data[i] not in trans_dict[prev]:
-            trans_dict[prev][filtered_data[i]] = 1
-        else:
-            trans_dict[prev][filtered_data[i]] += 1
+        if "." in temp and (temp[0]=="."):
+            prev.append(filtered_data[i])
+            l_pointer += 1
+            r_pointer += 1
+            value = prev[l_pointer:r_pointer]
+            starting_values.add(value)  
+                
             
-    return trans_dict        
+            continue
+        
+        if "." in temp and (temp[-1]!="."):
+            prev.append(filtered_data[i])
+            l_pointer += 1
+            r_pointer += 1
+            continue
+            
+        hashable_prev = tuple(temp)
+    
+        if hashable_prev not in trans_dict:
+            trans_dict[hashable_prev] = {}
+        
+        if filtered_data[i] not in trans_dict[hashable_prev]:
+            trans_dict[hashable_prev][filtered_data[i]] = 1
+        else:
+            trans_dict[hashable_prev][filtered_data[i]] += 1
+    
+        prev.append(filtered_data[i])
+        l_pointer += 1
+        r_pointer += 1         
+    return trans_dict,starting_values        
 
 
-def make_sentences(transition:dict,number = 5):
+def make_sentences(transition:dict,starting_values,order,number = 5):
     for k,v in transition.items():
         s = sum(v.values())
         for k2,v2 in v.items():
             transition[k][k2] = round(v2/s,4) 
+            
     count = 0
     string = ""
     seen = {}
-    print(transition["."])
-    curr = random.choice(list(transition["."].keys()))
-    while count<5:
+    curr = random.choice(starting_values)
+    while count<number:
         
         if curr not in seen:
             possibilities = []
@@ -73,6 +104,7 @@ def make_sentences(transition:dict,number = 5):
             seen[curr] = (probabilities,possibilities) # important
         
         P,states = seen[curr]
+        
         index = (Categorical(tensor(P))).sample().item()        
         word = states[index]
         
@@ -83,13 +115,15 @@ def make_sentences(transition:dict,number = 5):
         
         if word == ".":
             count += 1
+            curr = random.choice(starting_values)
             
     return string          
     
 if __name__=="__main__":
+    ORDER = 2
     data = taking_data_input()
     fil_data = filter_data(data)
-    transition_model = create_transition_dict(fil_data)
-    print(make_sentences(transition_model,3))        
+    transition_model,start = create_transition_dict(fil_data,ORDER)
+    print(make_sentences(transition_model,start,ORDER,3))        
            
     
