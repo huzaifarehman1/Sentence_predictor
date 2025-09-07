@@ -54,7 +54,7 @@ def create_transition_dict(filtered_data:list,order = 1): #order for markov chai
             prev.append(filtered_data[i])
             l_pointer += 1
             r_pointer += 1
-            value = prev[l_pointer:r_pointer]
+            value = tuple(prev[l_pointer:r_pointer])
             starting_values.add(value)  
                 
             
@@ -79,7 +79,7 @@ def create_transition_dict(filtered_data:list,order = 1): #order for markov chai
         prev.append(filtered_data[i])
         l_pointer += 1
         r_pointer += 1         
-    return trans_dict,starting_values        
+    return trans_dict,list(starting_values        )
 
 
 def make_sentences(transition:dict,starting_values,order,number = 5):
@@ -89,16 +89,18 @@ def make_sentences(transition:dict,starting_values,order,number = 5):
             transition[k][k2] = round(v2/s,4) 
             
     count = 0
-    string = ""
+    string = []
     seen = {}
-    curr = random.choice(starting_values)
+    curr = starting_values.pop(0)
+    for i in range(len(curr)):
+        string.append(curr[i])
     while count<number:
         
         if curr not in seen:
             possibilities = []
             probabilities = []
-        
             for k,v in transition[curr].items():
+                
                 probabilities.append(v)
                 possibilities.append(k)
             seen[curr] = (probabilities,possibilities) # important
@@ -107,23 +109,45 @@ def make_sentences(transition:dict,starting_values,order,number = 5):
         
         index = (Categorical(tensor(P))).sample().item()        
         word = states[index]
-        
-        if word not in [".",","]:
-            string += " "
-        string += word 
-        curr = word 
-        
+        string.append(word)
         if word == ".":
             count += 1
-            curr = random.choice(starting_values)
+            curr = starting_values.pop(0)
+            for i in range(order):
+                string.append(curr[i])
+        else:
+            curr = tuple(string[len(string)-order::]) 
+            assert len(curr)==order               
             
     return string          
+    
+def print_sentence(sentence):
+    print("1:",end = "")
+    k = 2
+    print(sentence[0],end = "")
+    for i in range(1,len(sentence)):
+        word = sentence[i]
+        if word == ".":
+            print(".",end = "")
+            print()
+            print()
+            print(f"{k}:",end = "")
+            k += 1
+            continue
+        if word == ",":
+            print(",",end = "")
+            continue
+        print(" ",end = "")
+        print(word,end="")
+    print()    
+    
     
 if __name__=="__main__":
     ORDER = 2
     data = taking_data_input()
     fil_data = filter_data(data)
     transition_model,start = create_transition_dict(fil_data,ORDER)
-    print(make_sentences(transition_model,start,ORDER,3))        
+    sentence = make_sentences(transition_model,start,ORDER,3)
+    print_sentence(sentence)
            
     
